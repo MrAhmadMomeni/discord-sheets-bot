@@ -1,13 +1,20 @@
+import os
+import re
 import discord
 import gspread
 from google.oauth2.service_account import Credentials
-import re
 
-# ===== تنظیمات =====
+# =========================
+# تنظیمات
+# =========================
+
 CHANNEL_ID = 1513119990788915290
 SPREADSHEET_NAME = "Mechanici-Beny"
 
-# ===== اتصال به گوگل شیت =====
+# =========================
+# اتصال به گوگل شیت
+# =========================
+
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
@@ -21,23 +28,35 @@ creds = Credentials.from_service_account_file(
 gc = gspread.authorize(creds)
 sheet = gc.open(SPREADSHEET_NAME).sheet1
 
-# ===== دیسکورد =====
+# =========================
+# دیسکورد
+# =========================
+
 intents = discord.Intents.default()
 intents.message_content = True
 
 client = discord.Client(intents=intents)
 
+# =========================
+# استخراج فیلدها
+# =========================
 
 def extract_field(text, field_name):
     pattern = rf"{re.escape(field_name)}:\s*(.*)"
     match = re.search(pattern, text)
     return match.group(1).strip() if match else ""
 
+# =========================
+# ربات آماده شد
+# =========================
 
 @client.event
 async def on_ready():
-    print(f"Logged in as {client.user}")
+    print(f"✅ Logged in as {client.user}")
 
+# =========================
+# دریافت فرم استخدام
+# =========================
 
 @client.event
 async def on_message(message):
@@ -50,22 +69,42 @@ async def on_message(message):
 
     content = message.content
 
-    ic_name = extract_field(content, "IC Name")
-    steam_name = extract_field(content, "Steam Name")
-    steam_hex = extract_field(content, "Steam Hex")
-    phone_number = extract_field(content, "IC Phone Number")
+    data = [
+        extract_field(content, "IC Name"),
+        extract_field(content, "Discord ID"),
+        extract_field(content, "Steam Name"),
+        extract_field(content, "Steam Hex"),
+        extract_field(content, "Sen OOC"),
+        extract_field(content, "Level Dar Shahr"),
+        extract_field(content, "IC Phone Number"),
+        extract_field(content, "Time-Play Roozane Shoma"),
+        extract_field(content, "Shift Kari (Sobh-Asr-Shab)"),
+        extract_field(content, "Aya Dar Organe Dige Ozv Budin? Che Organi"),
+        extract_field(content, "Aya Gavahi-Name Ranandegi Darid?"),
+        extract_field(content, "Aya Gavahi-Name Heli Darid?"),
+        extract_field(content, "Aya Tajrobe RP kardan Darid?")
+    ]
 
-    if not ic_name:
+    if not data[0]:
         return
 
-    sheet.append_row([
-        ic_name,
-        steam_name,
-        steam_hex,
-        phone_number
-    ])
+    try:
+        sheet.append_row(data)
 
-    print(f"Saved: {ic_name}")
+        print(f"✅ Saved: {data[0]}")
 
+        await message.add_reaction("✅")
 
-client.run("YOUR_BOT_TOKEN")
+    except Exception as e:
+        print(f"❌ Error: {e}")
+
+# =========================
+# اجرای ربات
+# =========================
+
+TOKEN = os.getenv("DISCORD_TOKEN")
+
+if not TOKEN:
+    print("❌ DISCORD_TOKEN not found")
+else:
+    client.run(TOKEN)
